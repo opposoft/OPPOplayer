@@ -1,6 +1,6 @@
 ![Main Image](https://raw.githubusercontent.com/opposoft/OPPOplayer/refs/heads/main/Images/MainImage.jpg)
 
-<p align="center"><img src="https://img.shields.io/badge/ОППО плеер-v0.1-ff4757?style=for-the-badge&logo=none" alt="ОППО плеер"></p>
+<p align="center"><img src="https://img.shields.io/badge/ОППО плеер-v0.2-ff4757?style=for-the-badge&logo=none" alt="ОППО плеер"></p>
 <p align="center">
   <a href="https://opposoft.github.io/OPPOplayer/">
     <img src="https://img.shields.io/badge/👁️ СМОТРЕТЬ 👁️-28a745?style=for-the-badge&logo=none">
