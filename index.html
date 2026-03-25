@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ОППО</title>
+	<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231e1e1e'/%3E%3Ctext x='50%25' y='50%25' fill='%23ff4757' font-size='26' font-family='sans-serif' font-weight='bold' text-anchor='middle' dy='.3em'%3EОППО%3C/text%3E%3C/svg%3E">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-color: #ffffff;
+            --text-muted: #a0a0a0;
+            --accent-color: #ff4757;
+            --hover-color: #2a2a2a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container { display: flex; flex: 1; overflow: hidden; }
+
+        .player-section {
+            flex: 1; display: flex; flex-direction: column;
+            background-color: #000; position: relative;
+        }
+
+        video { width: 100%; height: 100%; outline: none; background: #000; }
+
+        .top-overlay {
+            position: absolute; top: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            z-index: 10; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+        }
+
+        .now-playing {
+            background: rgba(0, 0, 0, 0.7); padding: 8px 15px; border-radius: 5px;
+            font-size: 0.9rem; display: flex; align-items: center; gap: 10px; pointer-events: auto;
+            backdrop-filter: blur(5px);
+        }
+
+		.right-controls {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+			gap: 8px;
+		}
+
+		/* Новый стиль для логотипа справа */
+		#nowPlayingLogo {
+			width: 24px; 
+			height: 24px; 
+			border-radius: 4px; 
+			object-fit: contain; 
+			background: #fff; 
+			padding: 2px;
+		}
+
+        .quality-selector {
+            background: rgba(0, 0, 0, 0.7); color: white; border: 1px solid #444;
+            padding: 8px 12px; border-radius: 5px; font-size: 0.9rem; outline: none;
+            cursor: pointer; pointer-events: auto; display: none; backdrop-filter: blur(5px);
+        }
+
+        .sidebar {
+            width: 320px; background-color: var(--surface-color);
+            display: flex; flex-direction: column; border-left: 1px solid #333;
+        }
+
+        .tabs { 
+            display: flex; 
+            flex-wrap: wrap;
+            border-bottom: 1px solid #333; 
+        }
+        .tab {
+            flex: 1 1 45%;
+            padding: 12px 5px;
+            text-align: center; 
+            cursor: pointer;
+            color: var(--text-muted); 
+            font-size: 0.95rem;
+            font-weight: 500; 
+            transition: 0.2s;
+            user-select: none;
+        }
+        .tab.active { 
+            color: var(--accent-color); 
+            border-bottom: 2px solid var(--accent-color); 
+        }
+
+        .channel-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .channel-item {
+            padding: 10px 15px; margin-bottom: 5px; border-radius: 5px; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center;
+        }
+        .channel-item:hover { background-color: var(--hover-color); }
+        .channel-item.active {
+            background-color: rgba(255, 71, 87, 0.1); color: var(--accent-color);
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .channel-logo { width: 32px; height: 32px; border-radius: 6px; margin-right: 12px; object-fit: contain; flex-shrink: 0; }
+        .channel-name { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .sidebar { width: 100%; flex: 1; border-left: none; }
+            .player-section { flex: none; height: 30vh; }
+        }
+
+		.player-placeholder {
+			position: absolute;
+			inset: 0;
+			z-index: 20;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			
+			background: linear-gradient(180deg, #1a1a2e 0%, #0a0a0a 100%);
+			
+			transition: opacity 0.6s ease, visibility 0.6s ease;
+		}
+
+		.player-placeholder.hidden {
+			opacity: 0;
+			visibility: hidden;
+			pointer-events: none;
+		}
+
+		.placeholder-content {
+			text-align: center;
+			z-index: 2;
+		}
+
+		.tv-icon {
+			position: relative;
+			display: inline-block;
+			margin-bottom: 0px;
+			animation: float 3s ease-in-out infinite;
+		}
+
+		/* Корпуса без тени */
+		.tv-icon svg .tv-body,
+		.tv-icon svg .radio-body {
+			stroke: #ff4757;
+		}
+
+		/* Мигающие точки на антеннах */
+		.tv-icon svg .antenna-dot {
+			animation: blink 1.5s ease-in-out infinite;
+		}
+
+		.placeholder-title {
+			font-size: 1.4rem;
+			font-weight: 600;
+			color: #fff;
+			margin-bottom: 8px;
+			letter-spacing: 0.5px;
+		}
+
+		.placeholder-subtitle {
+			font-size: 0.9rem;
+			color: #666;
+		}
+
+		@keyframes float {
+			0%, 100% { transform: translateY(0); }
+			50% { transform: translateY(-10px); }
+		}
+
+		@keyframes blink {
+			0%, 100% { opacity: 1; }
+			50% { opacity: 0.3; }
+		}
+		
+        .search-container {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            background-color: var(--surface-color);
+        }
+        
+        #searchInput {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            outline: none;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        #searchInput:focus { border-color: var(--accent-color); }
+		
+		.fav-btn {
+			background: none;
+			border: none;
+			color: #666;
+			font-size: 1.2rem;
+			cursor: pointer;
+			padding: 0 5px;
+			margin-left: auto;
+			transition: 0.2s;
+		}
+		.fav-btn:hover { color: var(--accent-color); transform: scale(1.1); }
+		.fav-btn.active { color: #f1c40f;}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="player-section">
+		
+			<div id="playerPlaceholder" class="player-placeholder">
+				<div class="placeholder-content">
+					<div class="tv-icon">
+						<svg viewBox="0 0 180 100" width="200" height="120">
+							<g class="tv-group">
+								<rect x="10" y="30" width="70" height="50" rx="5" 
+									  fill="none" stroke="#ff4757" stroke-width="2" class="tv-body"/>
+								<line x1="35" y1="30" x2="20" y2="10" stroke="#ff4757" stroke-width="2" class="antenna"/>
+								<line x1="55" y1="30" x2="70" y2="10" stroke="#ff4757" stroke-width="2" class="antenna"/>
+								<circle cx="20" cy="10" r="2.5" fill="#ff4757" class="antenna-dot"/>
+								<circle cx="70" cy="10" r="2.5" fill="#ff4757" class="antenna-dot"/>
+								<rect x="15" y="36" width="45" height="38" rx="2" 
+									  fill="rgba(255,71,87,0.05)" stroke="#ff4757" stroke-width="1" opacity="0.3"/>
+								<circle cx="70" cy="44" r="2.5" fill="none" stroke="#ff4757" stroke-width="1.5"/>
+								<circle cx="70" cy="55" r="2.5" fill="none" stroke="#ff4757" stroke-width="1.5"/>
+								<circle cx="70" cy="66" r="2.5" fill="none" stroke="#ff4757" stroke-width="1.5"/>
+							</g>
+							
+							<g class="radio-group">
+								<rect x="100" y="30" width="70" height="50" rx="8" 
+									  fill="none" stroke="#ff4757" stroke-width="2" class="radio-body"/>
+								<line x1="155" y1="30" x2="170" y2="10" 
+									  stroke="#ff4757" stroke-width="2" class="antenna"/>
+								<circle cx="170" cy="10" r="2.5" fill="#ff4757" class="antenna-dot"/>
+								<circle cx="122" cy="55" r="15" fill="none" stroke="#ff4757" stroke-width="1.5"/>
+								<circle cx="122" cy="55" r="9" fill="none" stroke="#ff4757" stroke-width="1" opacity="0.6"/>
+								<circle cx="122" cy="55" r="4" fill="none" stroke="#ff4757" stroke-width="1" opacity="0.3"/>
+								<rect x="145" y="40" width="18" height="8" rx="1" 
+									  fill="none" stroke="#ff4757" stroke-width="1"/>
+								<line x1="154" y1="41" x2="154" y2="47" stroke="#ff4757" stroke-width="1"/>
+								<circle cx="149" cy="62" r="4" fill="none" stroke="#ff4757" stroke-width="1.5"/>
+								<circle cx="160" cy="62" r="4" fill="none" stroke="#ff4757" stroke-width="1.5"/>
+							</g>
+						</svg>
+						<div class="scan-lines"></div>
+						<div class="glitch-overlay"></div>
+					</div>
+					<h1 style="color:#ff4757; font-size: 2rem; margin-bottom: 10px; letter-spacing: 2px;">ОППО<span style="color:#a0a0a0; font-size:0.5em;">v.01</span></h1>
+					<p class="placeholder-title">Выберите канал</p>
+					<p class="placeholder-subtitle">из списка справа для начала просмотра</p>
+				</div>
+			</div>
+	
+			<div id="topOverlay" class="top-overlay" style="justify-content: flex-end;">
+				<div class="right-controls">
+					<div class="now-playing">
+						<span id="nowPlayingText">Выберите канал</span>
+						<img id="nowPlayingLogo" src="" style="display:none;">
+					</div>
+					<select id="qualitySelector" class="quality-selector"></select>
+				</div>
+			</div>
+            <video id="videoPlayer" controls autoplay playsinline style="display: none;"></video>
+			<canvas id="audioVisualizer" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5;"></canvas>
+			<iframe id="youtubePlayer" style="display: none; width: 100%; height: 100%; border: none; background: #000;" allow="autoplay; encrypted-media; fullscreen"></iframe>
+        </div>
+
+        <div class="sidebar">
+		        <div class="search-container">
+					<input type="text" id="searchInput" placeholder="Поиск каналов..." autocomplete="off">
+				</div>
+				<div class="tabs">
+					<div id="tab-favorites" class="tab" onclick="switchTab('favorites')">⭐ Избр.</div>
+					<div id="tab-russiantv" class="tab active" onclick="switchTab('russiantv')">Rus</div>
+					<div id="tab-ukrainiantv" class="tab" onclick="switchTab('ukrainiantv')">Ukr</div>
+					<div id="tab-germantv" class="tab" onclick="switchTab('germantv')">Ger</div>
+					<div id="tab-englishtv" class="tab" onclick="switchTab('englishtv')">Eng</div>				
+					<div id="tab-radio" class="tab" onclick="switchTab('radio')">Radio</div>
+				</div>
+            <div id="channelList" class="channel-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const defaultLogo = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="%23333"/><text x="50%" y="50%" fill="%23888" font-size="10" font-family="sans-serif" text-anchor="middle" dy=".3em">TV</text></svg>';
+
+        // --- БАЗА ДАННЫХ ---
+        const channels = {
+			russiantv: [
+				{ 
+                    name: "Дождь", 
+                    logo: "https://tvrain.tv/favicon.ico",
+                    streams: {
+                        "auto": "https://wl.tvrain.tv/transcode/ngrp:ses_all/playlist.m3u8",
+						"1080p": "https://wl.tvrain.tv/transcode/ngrp:ses_all/chunklist_b6692000.m3u8",
+						"720p": "https://wl.tvrain.tv/transcode/ngrp:ses_all/chunklist_b2628000.m3u8",
+						"480p": "https://wl.tvrain.tv/transcode/ngrp:ses_all/chunklist_b1628000.m3u8",
+						"360p": "https://wl.tvrain.tv/transcode/ngrp:ses_all/chunklist_b1096000.m3u8",
+                    }
+                },
+				{ 
+                    name: "DW", 
+                    logo: "https://www.dw.com/favicon.ico",
+                    streams: {
+                        "auto": "https://dwamdstream110.akamaized.net/hls/live/2017971/dwstream110/master.m3u8",
+						"1080p": "https://dwamdstream110.akamaized.net/hls/live/2017971/dwstream110/stream05/streamPlaylist.m3u8",
+						"720p": "https://dwamdstream110.akamaized.net/hls/live/2017971/dwstream110/stream04/streamPlaylist.m3u8",
+						"540p": "https://dwamdstream110.akamaized.net/hls/live/2017971/dwstream110/stream03/streamPlaylist.m3u8",
+						"360p": "https://dwamdstream110.akamaized.net/hls/live/2017971/dwstream110/stream02/streamPlaylist.m3u8",
+						"270p": "https://dwamdstream110.akamaized.net/hls/live/2017971/dwstream110/stream01/streamPlaylist.m3u8"
+                    }
+                },
+				{
+                    name: "Настоящее Время", 
+                    logo: "https://www.google.com/s2/favicons?sz=64&domain=https://www.currenttime.tv",
+					streams: {
+                        "auto": "https://rferl-ingest.akamaized.net/hls/live/2121657/tvmc05/playlist.m3u8",
+						"1080p": "https://rferl-ingest.akamaized.net/hls/live/2121657/tvmc05/playlist_1080.m3u8",
+						"720p": "https://rferl-ingest.akamaized.net/hls/live/2121657/tvmc05/playlist_0720.m3u8",
+						"480p": "https://rferl-ingest.akamaized.net/hls/live/2121657/tvmc05/playlist_0480.m3u8",
+						"360p": "https://rferl-ingest.akamaized.net/hls/live/2121657/tvmc05/playlist_0360.m3u8",
+						"240p": "https://rferl-ingest.akamaized.net/hls/live/2121657/tvmc05/playlist_0240.m3u8"
+                    }
+                },
+				{
+                    name: "9 канал", 
+                    logo: "https://www.google.com/s2/favicons?sz=64&domain_url=https://www.9tv.co.il",
+					streams: {
+                        "auto": "https://contact.gostreaming.tv/Con-11/index.m3u8",
+						"1080p": "https://contact.gostreaming.tv/Con-11/tracks-v1a1/mono.ts.m3u8"
+                    }
+                },
+				{ 
+					name: "Белсат", 
+					logo: "https://www.google.com/s2/favicons?sz=64&domain=https://belsat.eu",
+					url: "https://www.yout-ube.com/embed/YA9ukP4k_Fk?autoplay=1",
+					isYouTube: true
+				},
+				{ 
+					name: "Euronews", 
+					logo: "https://euronews.com/favicon.ico",
+					url: "https://www.yout-ube.com/embed/lwYzwdBiaho?autoplay=1",
+					isYouTube: true
+				}
+            ],
+			ukrainiantv: [
+				{ 
+                    name: "FreeДом", 
+                    logo: "https://www.google.com/s2/favicons?sz=32&domain_url=https://uatv.ua",
+                    streams: {
+                        "auto": "https://public.cdn-03.cosmonova.net.ua/mobile-app/main/FreeDom/master.m3u8",
+						"1080p": { 
+                            v: "https://public.cdn-03.cosmonova.net.ua/mobile-app/main/FreeDom/FreeDom__vhi.m3u8", 
+                            a: "https://public.cdn-03.cosmonova.net.ua/mobile-app/main/FreeDom/FreeDom__ahi_ukr.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://public.cdn-03.cosmonova.net.ua/mobile-app/main/FreeDom/FreeDom__vmid.m3u8", 
+                            a: "https://public.cdn-03.cosmonova.net.ua/mobile-app/main/FreeDom/FreeDom__ahi_ukr.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://public.cdn-03.cosmonova.net.ua/mobile-app/main/FreeDom/FreeDom__vlow.m3u8", 
+                            a: "https://public.cdn-03.cosmonova.net.ua/mobile-app/main/FreeDom/FreeDom__ahi_ukr.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+					name: "ICTV", 
+					logo: "https://www.google.com/s2/favicons?sz=64&domain_url=https://ictv.ua/",
+					url: "https://www.yout-ube.com/embed/v_hgVy3tUZM?autoplay=1",
+					isYouTube: true
+				}
+            ],
+            germantv: [
+                { 
+                    name: "ZDF", 
+                    logo: "https://www.zdf.de/favicon.ico",
+                    streams: {
+                        "auto": "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/high/master.m3u8",
+						"720p": { 
+                            v: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/06505f5995df56fa0fea8ed8111106c8/3/3.m3u8", 
+                            a: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/06505f5995df56fa0fea8ed8111106c8/4/4.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/06505f5995df56fa0fea8ed8111106c8/2/2.m3u8", 
+                            a: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/06505f5995df56fa0fea8ed8111106c8/4/4.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/06505f5995df56fa0fea8ed8111106c8/1/1.m3u8", 
+                            a: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/06505f5995df56fa0fea8ed8111106c8/4/4.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "ZDFneo", 
+                    logo: "https://www.zdf.de/favicon.ico",
+                    streams: {
+                        "auto": "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/high/master.m3u8",
+						"720p": { 
+                            v: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/417dbdb1b7663089748b12a95a1bc288/3/3.m3u8", 
+                            a: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/417dbdb1b7663089748b12a95a1bc288/4/4.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/417dbdb1b7663089748b12a95a1bc288/2/2.m3u8", 
+                            a: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/417dbdb1b7663089748b12a95a1bc288/4/4.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/417dbdb1b7663089748b12a95a1bc288/1/1.m3u8", 
+                            a: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/417dbdb1b7663089748b12a95a1bc288/4/4.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "ZDFinfo", 
+                    logo: "https://www.zdf.de/favicon.ico",
+                    streams: {
+                        "auto": "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/high/master.m3u8",
+						"720p": { 
+                            v: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/41fd6ce4d3ed8fefaa9be8318d894d1f/3/3.m3u8", 
+                            a: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/41fd6ce4d3ed8fefaa9be8318d894d1f/4/4.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/41fd6ce4d3ed8fefaa9be8318d894d1f/2/2.m3u8", 
+                            a: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/41fd6ce4d3ed8fefaa9be8318d894d1f/4/4.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/41fd6ce4d3ed8fefaa9be8318d894d1f/1/1.m3u8", 
+                            a: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/41fd6ce4d3ed8fefaa9be8318d894d1f/4/4.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "3sat", 
+                    logo: "https://www.3sat.de/favicon.ico",
+                    streams: {
+                        "auto": "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/high/master.m3u8",
+						"720p": { 
+                            v: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/f5a1a3a601419d26f00b02c0144848fd/3/3.m3u8", 
+                            a: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/f5a1a3a601419d26f00b02c0144848fd/4/4.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/f5a1a3a601419d26f00b02c0144848fd/2/2.m3u8", 
+                            a: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/f5a1a3a601419d26f00b02c0144848fd/4/4.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/f5a1a3a601419d26f00b02c0144848fd/1/1.m3u8", 
+                            a: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/f5a1a3a601419d26f00b02c0144848fd/4/4.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "Phoenix", 
+                    logo: "https://www.phoenix.de/favicon.ico",
+                    streams: {
+                        "auto": "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/high/master.m3u8",
+						"720p": { 
+                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/3/3.m3u8", 
+                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/4/4.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/2/2.m3u8", 
+                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/4/4.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/1/1.m3u8", 
+                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/4/4.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "arte", 
+                    logo: "https://www.arte.tv/favicon.ico",
+                    streams: {
+                        "auto": "https://artelivezdf.akamaized.net/hls/live/2030993/artelive_de/index.m3u8",
+						"720p": "https://artelivezdf.akamaized.net/hls/live/2030993/artelive_de/master_v720.m3u8"                 
+                    }
+                },
+                { 
+                    name: "KiKA", 
+                    logo: "https://www.kika.de/favicon.ico",
+                    streams: {
+						"auto": "https://kika-live.ard-mcdn.de/kika/live/hls/de/master.m3u8",
+                        "1080p": { 
+                            v: "https://kika-live.ard-mcdn.de/kika/live/hls/de/master1080p5000.m3u8", 
+                            a: "https://kika-live.ard-mcdn.de/kika/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://kika-live.ard-mcdn.de/kika/live/hls/de/master720p3200.m3u8", 
+                            a: "https://kika-live.ard-mcdn.de/kika/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://kika-live.ard-mcdn.de/kika/live/hls/de/master540p1600.m3u8", 
+                            a: "https://kika-live.ard-mcdn.de/kika/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://kika-live.ard-mcdn.de/kika/live/hls/de/master360p1200.m3u8", 
+                            a: "https://kika-live.ard-mcdn.de/kika/live/hls/de/masteraudio1.m3u8" 
+                        }
+                    }
+                },
+				{ 
+                    name: "ARD", 
+                    logo: "https://www.google.com/s2/favicons?sz=64&domain=https://www.ard.de",
+                    streams: {
+                        "auto": "https://daserste-live.ard-mcdn.de/daserste/live/hls/de/master.m3u8",
+						"720p": { 
+                            v: "https://daserste-live.ard-mcdn.de/daserste/live/hls/de/master720p3200.m3u8", 
+                            a: "https://daserste-live.ard-mcdn.de/daserste/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://daserste-live.ard-mcdn.de/daserste/live/hls/de/master540p1600.m3u8", 
+                            a: "https://daserste-live.ard-mcdn.de/daserste/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://daserste-live.ard-mcdn.de/daserste/live/hls/de/master360p1200.m3u8", 
+                            a: "https://daserste-live.ard-mcdn.de/daserste/live/hls/de/masteraudio1.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "BR", 
+                    logo: "https://www.br.de/favicon.ico",
+                    streams: {
+                        "auto": "https://mcdn.br.de/br/fs/bfs_sued/hls/de/master.m3u8",
+						"1080p": { 
+                            v: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/master1080p5000.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/masteraudio1.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/master720p3200.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/masteraudio1.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/master540p1600.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/masteraudio1.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/master360p1200.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/masteraudio1.m3u8" 
+                        },
+						"270p": { 
+                            v: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/master270p700.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/bfs_sued/hls/de/masteraudio1.m3u8" 
+                        }  						
+                    }
+                },
+				{ 
+                    name: "hr", 
+                    logo: "https://www.hr.de/favicon.ico",
+                    streams: {
+                        "auto": "https://hr-live.ard-mcdn.de/hr/live/hls/de/master.m3u8",
+						"1080p": { 
+                            v: "https://hr-live.ard-mcdn.de/hr/live/hls/de/master1080p5000.m3u8", 
+                            a: "https://hr-live.ard-mcdn.de/hr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://hr-live.ard-mcdn.de/hr/live/hls/de/master720p3200.m3u8", 
+                            a: "https://hr-live.ard-mcdn.de/hr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://hr-live.ard-mcdn.de/hr/live/hls/de/master540p1600.m3u8", 
+                            a: "https://hr-live.ard-mcdn.de/hr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://hr-live.ard-mcdn.de/hr/live/hls/de/master360p1200.m3u8", 
+                            a: "https://hr-live.ard-mcdn.de/hr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"270p": { 
+                            v: "https://hr-live.ard-mcdn.de/hr/live/hls/de/master270p700.m3u8", 
+                            a: "https://hr-live.ard-mcdn.de/hr/live/hls/de/masteraudio1.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "MDR", 
+                    logo: "https://www.mdr.de/favicon.ico",
+                    streams: {
+                        "auto": "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/master.m3u8",
+						"1080p": { 
+                            v: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/master1080p5000.m3u8", 
+                            a: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/master720p3200.m3u8", 
+                            a: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/master540p1600.m3u8", 
+                            a: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/master360p1200.m3u8", 
+                            a: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"270p": { 
+                            v: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/master270p700.m3u8", 
+                            a: "https://mdr-live.ard-mcdn.de/mdr/live/hls/de/masteraudio1.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "NDR", 
+                    logo: "https://www.ndr.de/favicon.ico",
+                    streams: {
+                        "auto": "https://mcdn.ndr.de/ndr/hls/ndr_fs/ndr_nds/master.m3u8",
+						"1080p": { 
+                            v: "https://mcdn.ndr.de/ndr/hls/ndr_fs/ndr_nds/master_1080.m3u8", 
+                            a: "https://mcdn.ndr.de/ndr/hls/ndr_fs/ndr_nds/master_de.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://mcdn.ndr.de/ndr/hls/ndr_fs/ndr_nds/master_720.m3u8", 
+                            a: "https://mcdn.ndr.de/ndr/hls/ndr_fs/ndr_nds/master_de.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://mcdn.ndr.de/ndr/hls/ndr_fs/ndr_nds/master_540.m3u8", 
+                            a: "https://mcdn.ndr.de/ndr/hls/ndr_fs/ndr_nds/master_de.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://mcdn.ndr.de/ndr/hls/ndr_fs/ndr_nds/master_360.m3u8", 
+                            a: "https://mcdn.ndr.de/ndr/hls/ndr_fs/ndr_nds/master_de.m3u8" 
+                        }                   
+                    }
+                },
+				{ 
+                    name: "rbb", 
+                    logo: "https://www.rbb24.de/favicon.ico",
+                    streams: {
+                        "auto": "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/master.m3u8",
+						"1080p": { 
+                            v: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/master1080p5000.m3u8", 
+                            a: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/masteraudio1.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/master720p3200.m3u8", 
+                            a: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/masteraudio1.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/master540p1600.m3u8", 
+                            a: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/masteraudio1.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/master360p1200.m3u8", 
+                            a: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/masteraudio1.m3u8" 
+                        },
+						"270p": { 
+                            v: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/master270p700.m3u8", 
+                            a: "https://rbb-live.ard-mcdn.de/rbb/brandenburg/hls/de/masteraudio1.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "SR/SWR", 
+                    logo: "https://www.swr.de/favicon.ico",
+                    streams: {
+                        "auto": "https://sr-live.ard-mcdn.de/sr/live/hls/de/master.m3u8",
+						"1080p": { 
+                            v: "https://sr-live.ard-mcdn.de/sr/live/hls/de/master1080p5000.m3u8", 
+                            a: "https://sr-live.ard-mcdn.de/sr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://sr-live.ard-mcdn.de/sr/live/hls/de/master720p3200.m3u8", 
+                            a: "https://sr-live.ard-mcdn.de/sr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://sr-live.ard-mcdn.de/sr/live/hls/de/master540p1600.m3u8", 
+                            a: "https://sr-live.ard-mcdn.de/sr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://sr-live.ard-mcdn.de/sr/live/hls/de/master360p1200.m3u8", 
+                            a: "https://sr-live.ard-mcdn.de/sr/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"270p": { 
+                            v: "https://sr-live.ard-mcdn.de/sr/live/hls/de/master270p700.m3u8", 
+                            a: "https://sr-live.ard-mcdn.de/sr/live/hls/de/masteraudio1.m3u8" 
+                        }  						
+                    }
+                },
+				{ 
+                    name: "WDR", 
+                    logo: "https://www.google.com/s2/favicons?sz=64&domain=https://www1.wdr.de",
+                    streams: {
+                        "auto": "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master.m3u8",
+						"1080p": { 
+                            v: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-1080p-5000.m3u8", 
+                            a: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-audio1-128.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-720p-3200.m3u8", 
+                            a: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-audio1-128.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-540p-1600.m3u8", 
+                            a: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-audio1-128.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-360p-1200.m3u8", 
+                            a: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-audio1-128.m3u8" 
+                        },
+						"270p": { 
+                            v: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-270p-700.m3u8", 
+                            a: "https://wdr-live.ard-mcdn.de/wdr/live/hls/de/master-audio1-128.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "ONE", 
+                    logo: "https://www.google.com/s2/favicons?sz=64&domain=https://www.ard.de",
+                    streams: {
+                        "auto": "https://mcdn-one.ard.de/ardone/hls/master.m3u8",
+						"1080p": { 
+                            v: "https://mcdn-one.ard.de/ardone/hls/master-1080p-5000.m3u8", 
+                            a: "https://mcdn-one.ard.de/ardone/hls/master-stereo.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://mcdn-one.ard.de/ardone/hls/master-720p-3200.m3u8", 
+                            a: "https://mcdn-one.ard.de/ardone/hls/master-stereo.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://mcdn-one.ard.de/ardone/hls/master-540p-1600.m3u8", 
+                            a: "https://mcdn-one.ard.de/ardone/hls/master-stereo.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://mcdn-one.ard.de/ardone/hls/master-360p-1200.m3u8", 
+                            a: "https://mcdn-one.ard.de/ardone/hls/master-stereo.m3u8" 
+                        },
+						"270p": { 
+                            v: "https://mcdn-one.ard.de/ardone/hls/master-270p-700.m3u8", 
+                            a: "https://mcdn-one.ard.de/ardone/hls/master-stereo.m3u8" 
+                        }                     
+                    }
+                },
+				{ 
+                    name: "tagesschau24", 
+                    logo: "https://www.tagesschau.de/favicon.ico",
+                    streams: {
+                        "auto": "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/master.m3u8",
+						"1080p": { 
+                            v: "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/master1080p5000.m3u8", 
+                            a: "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/master720p3200.m3u8", 
+                            a: "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/master540p1600.m3u8", 
+                            a: "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/masteraudio1.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/master360p1200.m3u8", 
+                            a: "https://tagesschau-live.ard-mcdn.de/tagesschau/live/hls/de/masteraudio1.m3u8" 
+                        }						
+                    }
+                },
+				{ 
+                    name: "alpha", 
+                    logo: "https://www.ardalpha.de/favicon.ico",
+                    streams: {
+                        "auto": "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master.m3u8?rn=0",
+						"1080p": { 
+                            v: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_1920p_5000.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_audio1_128.m3u8" 
+                        },
+						"720p": { 
+                            v: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_1280p_3200.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_audio1_128.m3u8" 
+                        },
+						"540p": { 
+                            v: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_960p_1600.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_audio1_128.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_640p_1200.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_audio1_128.m3u8" 
+                        },
+						"270p": { 
+                            v: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_480p_700.m3u8", 
+                            a: "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master_audio1_128.m3u8" 
+                        }  						
+                    }
+                },
+				{ 
+                    name: "WELT", 
+                    logo: "https://www.welt.de/favicon.ico",
+                    streams: {
+                        "auto": "https://w-live2weltcms.akamaized.net/hls/live/2041019/Welt-LivePGM/index.m3u8"			
+                    }
+                },
+				{ 
+                    name: "ServusTV", 
+                    logo: "https://www.servustv.com/favicon.ico",
+                    streams: {
+                        "auto": "https://freqsyndlin.servustv.com/771_playlist.m3u8",
+						"1080p": "https://freqsyndlin.servustv.com/771_playlist_1.m3u8",
+						"720p": "https://freqsyndlin.servustv.com/771_playlist_2.m3u8",
+						"576p": "https://freqsyndlin.servustv.com/771_playlist_3.m3u8",
+						"360p": "https://freqsyndlin.servustv.com/771_playlist_4.m3u8",
+						"216p": "https://freqsyndlin.servustv.com/771_playlist_5.m3u8",  						
+                    }
+                }
+            ],
+			englishtv: [
+                { 
+                    name: "BBC News 🇬🇧",
+                    logo: "https://www.bbc.com/favicon.ico",
+                    streams: {
+						"1080p": "https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8",
+						"540p": "https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/t=3840/v=pv10/b=1604032/main.m3u8",
+						"396p": "https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/t=3840/v=pv8/b=827008/a=pa4/b=128000/main.m3u8"
+                    }
+                },
+				{ 
+                    name: "Sky News 🇬🇧", 
+                    logo: "https://news.sky.com/favicon.ico",
+                    streams: {
+                        "auto": "https://linear901-oo-hls0-prd-gtm.delivery.skycdp.com/v1/master/6404a5d732e04991ed59ac7790b61cc065c9aabd/prod-gb-lin-skynews-hls-25-web/master.m3u8",
+						"1080p": { 
+                            v: "https://linear901-oo-hls0-prd-gtm.delivery.skycdp.com/v1/master/6404a5d732e04991ed59ac7790b61cc065c9aabd/prod-gb-lin-skynews-hls-25-web/stream04/streamPlaylist.m3u8", 
+                            a: "https://linear901-oo-hls0-prd-gtm.delivery.skycdp.com/v1/master/6404a5d732e04991ed59ac7790b61cc065c9aabd/prod-gb-lin-skynews-hls-25-web/stream08/streamPlaylist.m3u8" 
+                        } 						
+                    }
+                },
+				{ 
+                    name: "DW 🇩🇪", 
+                    logo: "https://www.dw.com/favicon.ico",
+                    streams: {
+                        "auto": "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8",
+						"1080p": "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/stream05/streamPlaylist.m3u8",
+						"720p": "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/stream04/streamPlaylist.m3u8",
+						"540p": "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/stream03/streamPlaylist.m3u8",
+						"360p": "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/stream02/streamPlaylist.m3u8",
+						"270p": "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/stream01/streamPlaylist.m3u8"
+                    }
+                },
+				{ 
+                    name: "NHK World 🇯🇵", 
+                    logo: "https://www3.nhk.or.jp/favicon.ico",
+                    streams: {
+                        "auto": "https://media-tyo.hls.nhkworld.jp/hls/w/live/master.m3u8",
+						"720p": { 
+                            v: "https://media-tyo.hls.nhkworld.jp/hls/w/live/1/sig/530224ae7fe14c4d840b06a0299d12f2255183a4d5ef16447a48ddc0b8f204d7/v3.m3u8", 
+                            a: "https://media-tyo.hls.nhkworld.jp/hls/w/live/1/sig/b95e9aa9a33513b4d3416b7a201ec82c0d5e59c711f7fb0191d49f299d05b62e/a1.m3u8" 
+                        },
+						"360p": { 
+                            v: "https://media-tyo.hls.nhkworld.jp/hls/w/live/1/sig/9fa6ed96d14643b974161813fcecb801cae7f22afcd40cb156763780c6446a35/v4.m3u8", 
+                            a: "https://media-tyo.hls.nhkworld.jp/hls/w/live/1/sig/b95e9aa9a33513b4d3416b7a201ec82c0d5e59c711f7fb0191d49f299d05b62e/a1.m3u8" 
+                        },
+						"180p": { 
+                            v: "https://media-tyo.hls.nhkworld.jp/hls/w/live/1/sig/6847a0ee41836b524f602816c9a9e3836b4591c5dfeacd44bcbeb82f016a596b/v5.m3u8", 
+                            a: "https://media-tyo.hls.nhkworld.jp/hls/w/live/1/sig/b95e9aa9a33513b4d3416b7a201ec82c0d5e59c711f7fb0191d49f299d05b62e/a1.m3u8" 
+                        }  						
+                    }
+                },
+				{ 
+                    name: "Arirang 🇰🇷", 
+                    logo: "https://www.google.com/s2/favicons?sz=64&domain=https://arirang.com",
+                    streams: {
+                        "auto": "https://amdlive-ch01-ctnd-com.akamaized.net/arirang_1ch/smil:arirang_1ch.smil/playlist.m3u8",
+						"1080p": "https://amdlive-ch01-ctnd-com.akamaized.net/arirang_1ch/smil:arirang_1ch.smil/chunklist_b3256000_sleng.m3u8",
+ 						"720p": "https://amdlive-ch01-ctnd-com.akamaized.net/arirang_1ch/smil:arirang_1ch.smil/chunklist_b2256000_sleng.m3u8",
+						"540p": "https://amdlive-ch01-ctnd-com.akamaized.net/arirang_1ch/smil:arirang_1ch.smil/chunklist_b1256000_sleng.m3u8",
+ 						"360p": "https://amdlive-ch01-ctnd-com.akamaized.net/arirang_1ch/smil:arirang_1ch.smil/chunklist_b656000_sleng.m3u8",
+                    }
+                },
+				{ 
+					name: "France 24 🇫🇷", 
+					logo: "https://www.france24.com/favicon.ico",
+					url: "https://www.yout-ube.com/embed/Ap-UM1O9RBU?autoplay=1",
+					isYouTube: true
+				}
+            ],
+			radio: [
+				{ 
+					name: "TBS Radio", 
+					url: "https://152.53.101.155:8443/main",
+					logo: "https://www.google.com/s2/favicons?sz=64&domain=https://radio.breakfast.show",
+					isRawAudio: true
+				},
+				{ 
+					name: "Радио Свобода", 
+					url: "https://rfe-ingest.akamaized.net/hls/live/2035254/axia04/playlist.m3u8",
+					logo: "https://www.google.com/s2/favicons?sz=64&domain=https://www.svoboda.org"
+				},
+				{ 
+					name: "Raadio 4 | ERR", 
+					url: "https://live.err.ee/live/raadio4.m3u8",
+					logo: "https://www.google.com/s2/favicons?sz=64&domain=https://s.err.ee"
+				}
+			]
+        };
+
+        const videoElement = document.getElementById('videoPlayer');
+		const youtubeElement = document.getElementById('youtubePlayer');
+        const channelListElement = document.getElementById('channelList');
+        const topOverlay = document.getElementById('topOverlay');
+        const nowPlayingText = document.getElementById('nowPlayingText');
+        const nowPlayingLogo = document.getElementById('nowPlayingLogo');
+        const qualitySelector = document.getElementById('qualitySelector');
+        
+		        // --- СОХРАНЕНИЕ ГРОМКОСТИ ---
+        // 1. Восстанавливаем сохраненную громкость при загрузке страницы
+        const savedVolume = localStorage.getItem('savedUserVolume');
+        const savedMuted = localStorage.getItem('savedUserMuted');
+        
+        if (savedVolume !== null) {
+            videoElement.volume = parseFloat(savedVolume);
+        }
+        if (savedMuted === 'true') {
+            videoElement.muted = true;
+        }
+
+        // 2. Слушаем изменения громкости и сохраняем их
+        videoElement.addEventListener('volumechange', () => {
+            localStorage.setItem('savedUserVolume', videoElement.volume);
+            localStorage.setItem('savedUserMuted', videoElement.muted);
+        });
+		
+		
+        let hls;
+        let currentActiveChannel = null;
+
+		// --- ИЗБРАННОЕ ---
+		let favoriteChannels = JSON.parse(localStorage.getItem('savedFavorites')) || [];
+
+		function toggleFavorite(channelName, currentTab) {
+			const index = favoriteChannels.indexOf(channelName);
+			if (index > -1) {
+				favoriteChannels.splice(index, 1); // Удаляем
+			} else {
+				favoriteChannels.push(channelName); // Добавляем
+			}
+			localStorage.setItem('savedFavorites', JSON.stringify(favoriteChannels));
+			
+			// Перерисовываем список, чтобы обновить звездочки (или убрать скрытый канал)
+			renderChannels(currentTab);
+		}
+
+        // --- ПОИСК ---
+        let searchQuery = "";
+
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            searchQuery = e.target.value.toLowerCase().trim();
+            
+            if (searchQuery) {
+                // Снимаем выделение со всех вкладок (мы в режиме поиска)
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                renderChannels('search');
+            } else {
+                // Если стерли текст, возвращаемся на первую вкладку
+                switchTab('russiantv');
+            }
+        });
+
+        // --- ЛОГИКА СКЛЕЙКИ ---
+        function createMasterBlob(videoUrl, audioUrl) {
+            const masterPlaylist = [
+                '#EXTM3U',
+                '#EXT-X-VERSION:3',
+                `#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Main Audio",DEFAULT=YES,AUTOSELECT=YES,URI="${audioUrl}"`,
+                `#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1280x720,AUDIO="audio"`,
+                videoUrl
+            ].join('\n');
+
+            const blob = new Blob([masterPlaylist], { type: 'application/vnd.apple.mpegurl' });
+            return URL.createObjectURL(blob);
+        }
+
+        // --- ЗАГРУЗКА ПОТОКА ---
+		function loadStream(streamData, isRawAudio = false) {
+			let finalUrl = "";
+			
+			// Если пришел объект {v, a}, клеим его в Blob
+			if (typeof streamData === 'object' && streamData !== null) {
+				finalUrl = createMasterBlob(streamData.v, streamData.a);
+			} else {
+				finalUrl = streamData;
+			}
+
+			// Всегда очищаем HLS плеер перед переключением, чтобы звук не накладывался
+			if (hls) {
+				hls.destroy();
+				hls = null;
+			}
+
+			if (isRawAudio) {
+				// Если это обычный аудиопоток (TBS), отдаем его напрямую в тег video
+				videoElement.src = finalUrl;
+				videoElement.play().catch(() => {});
+			} else {
+				// Если это обычное ТВ или HLS-радио (Радио Свобода)
+				if (Hls.isSupported()) {
+					hls = new Hls();
+					hls.loadSource(finalUrl);
+					hls.attachMedia(videoElement);
+					hls.on(Hls.Events.MANIFEST_PARSED, () => videoElement.play().catch(() => {}));
+				} 
+				else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+					videoElement.src = finalUrl;
+				}
+			}
+		}
+
+        function getBestQualityKey(keys, savedPref) {
+            if (!savedPref) return keys[0];
+            if (keys.includes(savedPref)) return savedPref;
+            const resMatch = savedPref.match(/\d{3,4}/);
+            if (resMatch) {
+                for (let key of keys) if (key.includes(resMatch[0])) return key;
+            }
+            return keys[0];
+        }
+
+        // --- ВЫБОР КАНАЛА ---
+        function updateMediaSession(channel) {
+            // Векторный логотип ОППО для плеера
+            const oppoLogo = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231e1e1e'/%3E%3Ctext x='50%25' y='50%25' fill='%23ff4757' font-size='26' font-family='sans-serif' font-weight='bold' text-anchor='middle' dy='.3em'%3EОППО%3C/text%3E%3C/svg%3E";
+            
+            const artworkSrc = channel.logo || oppoLogo;
+
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: channel.name,
+                    artist: 'ОППО',
+                    artwork: [
+                        { src: artworkSrc, sizes: '96x96', type: 'image/svg+xml' },
+                        { src: artworkSrc, sizes: '512x512', type: 'image/svg+xml' }
+                    ]
+                });
+            }
+        }
+
+        // --- ВЫБОР КАНАЛА ---
+		function playChannel(channel, element) {
+			videoElement.crossOrigin = "anonymous";
+			document.getElementById('playerPlaceholder').classList.add('hidden');
+			currentActiveChannel = channel;
+			document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+			if(element) element.classList.add('active');
+
+			nowPlayingText.textContent = channel.name;
+			nowPlayingLogo.src = channel.logo || defaultLogo;
+			nowPlayingLogo.style.display = 'block';
+			topOverlay.style.opacity = 1;
+
+			updateMediaSession(channel);
+			// Проверка: это радио?
+			const isRadio = channel.isRawAudio || (channels.radio && channels.radio.some(r => r.name === channel.name));
+
+			if (isRadio) {
+				initAudioVisualizer();
+				canvas.style.display = 'block';
+				drawVisualizer();
+			} else {
+				canvas.style.display = 'none';
+			}
+	
+			// ЕСЛИ ЭТО YOUTUBE
+			if (channel.isYouTube) {
+				// Выключаем обычный видеоплеер
+				videoElement.style.display = 'none';
+				if (hls) { hls.destroy(); hls = null; }
+				videoElement.pause();
+				videoElement.removeAttribute('src');
+				videoElement.load();
+
+				// Прячем выбор качества (в Ютубе он встроенный)
+				qualitySelector.style.display = 'none';
+
+				// Включаем iframe
+				youtubeElement.style.display = 'block';
+				youtubeElement.src = channel.url;
+			} 
+			// ЕСЛИ ЭТО ОБЫЧНОЕ ТВ ИЛИ РАДИО
+			else {
+				// Выключаем Ютуб (чтобы не играл звук на фоне)
+				youtubeElement.style.display = 'none';
+				youtubeElement.src = ''; 
+
+				// Включаем обычный видеоплеер
+				videoElement.style.display = 'block';
+
+				let streams = channel.streams || { "Авто": channel.url };
+				qualitySelector.innerHTML = ''; 
+				const qualityKeys = Object.keys(streams);
+
+				if (qualityKeys.length > 1) {
+					qualitySelector.style.display = 'block';
+					qualityKeys.forEach(key => {
+						const option = document.createElement('option');
+						option.value = key; 
+						option.textContent = key;
+						qualitySelector.appendChild(option);
+					});
+				} else {
+					qualitySelector.style.display = 'none';
+				}
+
+				const savedQuality = localStorage.getItem('savedUserQuality');
+				const bestKey = getBestQualityKey(qualityKeys, savedQuality);
+				
+				qualitySelector.value = bestKey;
+				// Тут передаем флаг isRawAudio из предыдущего решения (для радио)
+				loadStream(streams[bestKey], channel.isRawAudio);
+			}
+		}
+
+        // --- ПЕРЕКЛЮЧЕНИЕ КАЧЕСТВА ---
+        qualitySelector.addEventListener('change', function(e) {
+            const key = e.target.value;
+            localStorage.setItem('savedUserQuality', key);
+            if (currentActiveChannel) {
+                const streams = currentActiveChannel.streams || { "Авто": currentActiveChannel.url };
+                loadStream(streams[key], currentActiveChannel.isRawAudio);
+            }
+        });
+
+		function renderChannels(type) {
+			channelListElement.innerHTML = ''; 
+			let channelsToRender = [];
+
+			if (type === 'favorites') {
+				const allChannels = [].concat(...Object.values(channels));
+				channelsToRender = allChannels.filter(ch => favoriteChannels.includes(ch.name))
+											  .filter((v, i, a) => a.findIndex(t => (t.name === v.name)) === i);
+				if (channelsToRender.length === 0) {
+					channelListElement.innerHTML = '<div style="padding: 20px; color: #666; text-align: center; font-size: 0.9rem;">Список избранного пуст.</div>';
+					return;
+				}
+			} else if (type === 'search') {
+				// Логика для поиска
+				const allChannels = [].concat(...Object.values(channels));
+				const uniqueChannels = allChannels.filter((v, i, a) => a.findIndex(t => (t.name === v.name)) === i);
+				
+				channelsToRender = uniqueChannels.filter(ch => ch.name.toLowerCase().includes(searchQuery));
+				
+				if (channelsToRender.length === 0) {
+					channelListElement.innerHTML = '<div style="padding: 20px; color: #666; text-align: center; font-size: 0.9rem;">Ничего не найдено</div>';
+					return;
+				}
+			} else {
+				channelsToRender = channels[type];
+			}
+
+			channelsToRender.forEach((channel) => {
+				const div = document.createElement('div');
+				div.className = 'channel-item';
+				if (currentActiveChannel && currentActiveChannel.name === channel.name) {
+					div.classList.add('active');
+				}
+						
+				const img = document.createElement('img');
+				img.className = 'channel-logo';
+				img.src = channel.logo || defaultLogo;
+				img.onerror = function() { if (this.src !== defaultLogo) this.src = defaultLogo; };
+
+				const span = document.createElement('span');
+				span.className = 'channel-name';
+				span.textContent = channel.name;
+
+				// --- Кнопка Избранного ---
+				const isFav = favoriteChannels.includes(channel.name);
+				const favBtn = document.createElement('button');
+				favBtn.className = 'fav-btn' + (isFav ? ' active' : '');
+				favBtn.innerHTML = isFav ? '★' : '☆';
+				
+				favBtn.onclick = (e) => {
+					e.stopPropagation(); // ВАЖНО: чтобы при клике на звезду канал не начинал играть
+					toggleFavorite(channel.name, type);
+				};
+
+				div.appendChild(img);
+				div.appendChild(span);
+				div.appendChild(favBtn); // Добавляем звездочку
+				
+				div.onclick = () => playChannel(channel, div);
+				channelListElement.appendChild(div);
+			});
+		}
+
+        function switchTab(type) {
+            // Очищаем поиск при переходе по вкладкам
+            document.getElementById('searchInput').value = '';
+            searchQuery = ''; 
+            
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + type).classList.add('active');
+            renderChannels(type);
+        }
+
+        window.onload = () => switchTab('russiantv');
+
+        // Интерфейс
+        let timeout;
+        const resetOverlayTimer = () => {
+            topOverlay.style.opacity = 1;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                if (document.activeElement !== qualitySelector) topOverlay.style.opacity = 0;
+            }, 3000);
+        };
+        document.querySelector('.player-section').onmousemove = resetOverlayTimer;
+        document.querySelector('.player-section').onclick = resetOverlayTimer;
+
+        // --- ЛОГИКА ЭКВАЛАЙЗЕРА ---
+        let audioContext, analyser, source, animationId;
+        const canvas = document.getElementById('audioVisualizer');
+        const canvasCtx = canvas.getContext('2d');
+
+        function initAudioVisualizer() {
+            if (!audioContext) {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioContext = new AudioContext();
+                    analyser = audioContext.createAnalyser();
+                    source = audioContext.createMediaElementSource(videoElement);
+                    source.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                    analyser.fftSize = 256;
+                } catch (e) { console.log("Ошибка аудио:", e); }
+            }
+            if (audioContext.state === 'suspended') audioContext.resume();
+        }
+
+        function drawVisualizer() {
+            if (canvas.style.display === 'none') {
+                cancelAnimationFrame(animationId);
+                return;
+            }
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            // 1. Находим центр экрана
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            const draw = () => {
+                if (canvas.style.display === 'none') return;
+                animationId = requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+                canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 2. Рассчитываем ширину, чтобы влезло в половину экрана
+                const barWidth = (centerX / bufferLength) * 2.5; 
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const barHeight = (dataArray[i] / 255) * (canvas.height * 0.6); // Высота
+                    
+                    // Делаем прозрачность зависимой от громкости (эффект неона)
+                    canvasCtx.fillStyle = `rgba(255, 71, 87, ${dataArray[i] / 255})`;
+                    
+                    // 3. Рисуем СИММЕТРИЧНО от центра
+                    // Правая сторона
+                    canvasCtx.fillRect(centerX + x, centerY - barHeight / 2, barWidth, barHeight);
+                    // Левая сторона (зеркально)
+                    canvasCtx.fillRect(centerX - x - barWidth, centerY - barHeight / 2, barWidth, barHeight);
+                    
+                    x += barWidth;
+                }
+            };
+            draw();
+        }
+    </script>
+</body>
+</html>
