@@ -216,6 +216,16 @@
 		}
 		.fav-btn:hover { color: var(--accent-color); transform: scale(1.1); }
 		.fav-btn.active { color: #f1c40f;}
+		
+		#simplePlayer {
+			width: 100%;
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			z-index: 15;
+			background: transparent;
+			height: 54px;
+		}
     </style>
 </head>
 <body>
@@ -260,7 +270,7 @@
 						<div class="scan-lines"></div>
 						<div class="glitch-overlay"></div>
 					</div>
-					<h1 style="color:#ff4757; font-size: 2rem; margin-bottom: 10px; letter-spacing: 2px;">ОППО<span style="color:#a0a0a0; font-size:0.5em;">v.01</span></h1>
+					<h1 style="color:#ff4757; font-size: 2rem; margin-bottom: 10px; letter-spacing: 2px;">ОППО<span style="color:#a0a0a0; font-size:0.5em;">v.02</span></h1>
 					<p class="placeholder-title">Выберите канал</p>
 					<p class="placeholder-subtitle">из списка справа для начала просмотра</p>
 				</div>
@@ -276,6 +286,7 @@
 				</div>
 			</div>
             <video id="videoPlayer" controls autoplay playsinline style="display: none;"></video>
+			<audio id="simplePlayer" controls autoplay style="display: none; width: 100%; position: absolute; bottom: 0; left: 0; z-index: 15;"></audio>
 			<canvas id="audioVisualizer" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5;"></canvas>
 			<iframe id="youtubePlayer" style="display: none; width: 100%; height: 100%; border: none; background: #000;" allow="autoplay; encrypted-media; fullscreen"></iframe>
         </div>
@@ -304,7 +315,7 @@
 			russiantv: [
 				{ 
                     name: "Дождь", 
-                    logo: "https://www.google.com/s2/favicons?sz=64&domain=https://tvrain.tv",
+                    logo: "https://tvrain.tv/favicon.ico",
                     streams: {
                         "auto": "https://wl.tvrain.tv/transcode/ngrp:ses_all/playlist.m3u8",
 						"1080p": "https://wl.tvrain.tv/transcode/ngrp:ses_all/chunklist_b6692000.m3u8",
@@ -468,16 +479,16 @@
                     streams: {
                         "auto": "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/high/master.m3u8",
 						"720p": { 
-                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/3/3.m3u8", 
-                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/4/4.m3u8" 
+                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/4e33db7ae82dc871753b3ba778e8b46b/3/3.m3u8", 
+                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/4e33db7ae82dc871753b3ba778e8b46b/4/4.m3u8" 
                         },
 						"540p": { 
-                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/2/2.m3u8", 
-                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/4/4.m3u8" 
+                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/4e33db7ae82dc871753b3ba778e8b46b/2/2.m3u8", 
+                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/4e33db7ae82dc871753b3ba778e8b46b/4/4.m3u8" 
                         },
 						"360p": { 
-                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/1/1.m3u8", 
-                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/3e05b7f56d0da7997d4d4b12c9c671ef/4/4.m3u8" 
+                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/4e33db7ae82dc871753b3ba778e8b46b/1/1.m3u8", 
+                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/4e33db7ae82dc871753b3ba778e8b46b/4/4.m3u8" 
                         }                     
                     }
                 },
@@ -899,11 +910,19 @@
 					name: "Raadio 4 | ERR", 
 					url: "https://live.err.ee/live/raadio4.m3u8",
 					logo: "https://www.google.com/s2/favicons?sz=64&domain=https://s.err.ee"
-				}
+				},
+				{
+					name: "Radio Sacharow",
+					url: "https://icecast.correctiv.net/sacharow",
+					logo: "https://www.google.com/s2/favicons?sz=64&domain=https://radiosakharov.org/",
+					useSimplePlayer: true
+				},
 			]
         };
 
         const videoElement = document.getElementById('videoPlayer');
+		const simplePlayer = document.getElementById('simplePlayer');
+		const simpleAudioPlayer = new Audio();
 		const youtubeElement = document.getElementById('youtubePlayer');
         const channelListElement = document.getElementById('channelList');
         const topOverlay = document.getElementById('topOverlay');
@@ -912,23 +931,35 @@
         const qualitySelector = document.getElementById('qualitySelector');
         
 		        // --- СОХРАНЕНИЕ ГРОМКОСТИ ---
-        // 1. Восстанавливаем сохраненную громкость при загрузке страницы
-        const savedVolume = localStorage.getItem('savedUserVolume');
-        const savedMuted = localStorage.getItem('savedUserMuted');
-        
-        if (savedVolume !== null) {
-            videoElement.volume = parseFloat(savedVolume);
-        }
-        if (savedMuted === 'true') {
-            videoElement.muted = true;
-        }
+		// --- СИНХРОНИЗАЦИЯ ГРОМКОСТИ МЕЖДУ ПЛЕЕРАМИ ---
+		const savedVolume = localStorage.getItem('savedUserVolume');
+		const savedMuted = localStorage.getItem('savedUserMuted');
 
-        // 2. Слушаем изменения громкости и сохраняем их
-        videoElement.addEventListener('volumechange', () => {
-            localStorage.setItem('savedUserVolume', videoElement.volume);
-            localStorage.setItem('savedUserMuted', videoElement.muted);
-        });
-		
+		// Восстанавливаем громкость при загрузке страницы
+		if (savedVolume !== null) {
+			videoElement.volume = parseFloat(savedVolume);
+			simplePlayer.volume = parseFloat(savedVolume);
+		}
+		if (savedMuted === 'true') {
+			videoElement.muted = true;
+			simplePlayer.muted = true;
+		}
+
+		// Когда меняешь громкость в основном плеере — копируем в простой
+		videoElement.addEventListener('volumechange', () => {
+			localStorage.setItem('savedUserVolume', videoElement.volume);
+			localStorage.setItem('savedUserMuted', videoElement.muted);
+			simplePlayer.volume = videoElement.volume;
+			simplePlayer.muted = videoElement.muted;
+		});
+
+		// Когда меняешь громкость в простом плеере — копируем в основной
+		simplePlayer.addEventListener('volumechange', () => {
+			localStorage.setItem('savedUserVolume', simplePlayer.volume);
+			localStorage.setItem('savedUserMuted', simplePlayer.muted);
+			videoElement.volume = simplePlayer.volume;
+			videoElement.muted = simplePlayer.muted;
+		});
 		
         let hls;
         let currentActiveChannel = null;
@@ -1045,76 +1076,95 @@
 
         // --- ВЫБОР КАНАЛА ---
 		function playChannel(channel, element) {
-			videoElement.crossOrigin = "anonymous";
+			// 1. Полный сброс ВСЕХ плееров
+			videoElement.pause();
+			videoElement.removeAttribute('src');
+			videoElement.load();
+			videoElement.style.display = 'none';
+
+			simplePlayer.pause();
+			simplePlayer.removeAttribute('src');
+			simplePlayer.load();
+			simplePlayer.style.display = 'none';
+
+			youtubeElement.style.display = 'none';
+			youtubeElement.src = '';
+
+			if (hls) { hls.destroy(); hls = null; }
+
+			canvas.style.display = 'none';
+			qualitySelector.style.display = 'none';
+
 			document.getElementById('playerPlaceholder').classList.add('hidden');
+
+			// 2. Обновляем UI
 			currentActiveChannel = channel;
 			document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
-			if(element) element.classList.add('active');
+			if (element) element.classList.add('active');
 
 			nowPlayingText.textContent = channel.name;
 			nowPlayingLogo.src = channel.logo || defaultLogo;
 			nowPlayingLogo.style.display = 'block';
 			topOverlay.style.opacity = 1;
-
 			updateMediaSession(channel);
-			// Проверка: это радио?
-			const isRadio = channel.isRawAudio || (channels.radio && channels.radio.some(r => r.name === channel.name));
 
-			if (isRadio) {
-				initAudioVisualizer();
-				canvas.style.display = 'block';
-				drawVisualizer();
-			} else {
-				canvas.style.display = 'none';
-			}
-	
-			// ЕСЛИ ЭТО YOUTUBE
+			// Восстанавливаем громкость
+			const savedVol = localStorage.getItem('savedUserVolume');
+			const savedMut = localStorage.getItem('savedUserMuted');
+
+			// --- YOUTUBE ---
 			if (channel.isYouTube) {
-				// Выключаем обычный видеоплеер
-				videoElement.style.display = 'none';
-				if (hls) { hls.destroy(); hls = null; }
-				videoElement.pause();
-				videoElement.removeAttribute('src');
-				videoElement.load();
-
-				// Прячем выбор качества (в Ютубе он встроенный)
-				qualitySelector.style.display = 'none';
-
-				// Включаем iframe
 				youtubeElement.style.display = 'block';
 				youtubeElement.src = channel.url;
-			} 
-			// ЕСЛИ ЭТО ОБЫЧНОЕ ТВ ИЛИ РАДИО
-			else {
-				// Выключаем Ютуб (чтобы не играл звук на фоне)
-				youtubeElement.style.display = 'none';
-				youtubeElement.src = ''; 
+				return;
+			}
 
-				// Включаем обычный видеоплеер
-				videoElement.style.display = 'block';
+			// --- ПРОСТОЕ РАДИО (Sacharow и подобные) ---
+			if (channel.useSimplePlayer) {
+				simplePlayer.style.display = 'block';
+				if (savedVol !== null) simplePlayer.volume = parseFloat(savedVol);
+				if (savedMut === 'true') simplePlayer.muted = true;
+				simplePlayer.src = channel.url;
+				simplePlayer.play().catch(e => console.log(e));
+				return;
+			}
 
-				let streams = channel.streams || { "Авто": channel.url };
-				qualitySelector.innerHTML = ''; 
-				const qualityKeys = Object.keys(streams);
+			// --- ОБЫЧНОЕ ТВ / HLS РАДИО ---
+			videoElement.style.display = 'block';
+			videoElement.crossOrigin = "anonymous";
+			if (savedVol !== null) videoElement.volume = parseFloat(savedVol);
+			if (savedMut === 'true') videoElement.muted = true;
 
-				if (qualityKeys.length > 1) {
-					qualitySelector.style.display = 'block';
-					qualityKeys.forEach(key => {
-						const option = document.createElement('option');
-						option.value = key; 
-						option.textContent = key;
-						qualitySelector.appendChild(option);
-					});
-				} else {
-					qualitySelector.style.display = 'none';
-				}
+			// Эквалайзер для радио
+			const isRadio = channel.isRawAudio || (channels.radio && channels.radio.some(r => r.name === channel.name));
+			if (isRadio) {
+				try {
+					initAudioVisualizer();
+					canvas.style.display = 'block';
+					drawVisualizer();
+				} catch (e) { canvas.style.display = 'none'; }
+			}
 
+			// Качество
+			let streams = channel.streams || { "default": channel.url };
+			const qualityKeys = Object.keys(streams);
+
+			if (qualityKeys.length > 1) {
+				qualitySelector.style.display = 'block';
+				qualitySelector.innerHTML = '';
+				qualityKeys.forEach(key => {
+					const option = document.createElement('option');
+					option.value = key;
+					option.textContent = key;
+					qualitySelector.appendChild(option);
+				});
 				const savedQuality = localStorage.getItem('savedUserQuality');
 				const bestKey = getBestQualityKey(qualityKeys, savedQuality);
-				
 				qualitySelector.value = bestKey;
-				// Тут передаем флаг isRawAudio из предыдущего решения (для радио)
 				loadStream(streams[bestKey], channel.isRawAudio);
+			} else {
+				const urlToPlay = Object.values(streams)[0];
+				loadStream(urlToPlay, channel.isRawAudio);
 			}
 		}
 
@@ -1279,4 +1329,4 @@
         }
     </script>
 </body>
-</html>
+	</html>
