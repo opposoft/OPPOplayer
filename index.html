@@ -270,7 +270,7 @@
 						<div class="scan-lines"></div>
 						<div class="glitch-overlay"></div>
 					</div>
-					<h1 style="color:#ff4757; font-size: 2rem; margin-bottom: 10px; letter-spacing: 2px;">ОППО<span style="color:#a0a0a0; font-size:0.5em;">v0.3</span></h1>
+					<h1 style="color:#ff4757; font-size: 2rem; margin-bottom: 10px; letter-spacing: 2px;">ОППО<span style="color:#a0a0a0; font-size:0.5em;">v0.4</span></h1>
 					<p class="placeholder-title">Выберите канал</p>
 					<p class="placeholder-subtitle">из списка справа для начала просмотра</p>
 				</div>
@@ -396,102 +396,56 @@
 					isYouTube: true
 				}
             ],
-            germantv: [
-                { 
-                    name: "ZDF", 
-                    logo: "https://www.zdf.de/favicon.ico",
-                    streams: {
-                        "auto": "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/high/master.m3u8",
-						"1080p": "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/veryhigh/master.m3u8",
-						"720p": { 
-                            v: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/fa6afb24b6bda4102241c439ffe2c94e/3/3.m3u8", 
-                            a: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/fa6afb24b6bda4102241c439ffe2c94e/4/4.m3u8" 
-                        },
-						"540p": { 
-                            v: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/fa6afb24b6bda4102241c439ffe2c94e/2/2.m3u8", 
-                            a: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/fa6afb24b6bda4102241c439ffe2c94e/4/4.m3u8" 
-                        },
-						"360p": { 
-                            v: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/fa6afb24b6bda4102241c439ffe2c94e/1/1.m3u8", 
-                            a: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/fa6afb24b6bda4102241c439ffe2c94e/4/4.m3u8" 
-                        }                     
-                    }
-                },
-				{ 
-                    name: "ZDFneo", 
-                    logo: "https://www.zdf.de/favicon.ico",
-                    streams: {
-                        "auto": "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/high/master.m3u8",
-						"720p": { 
-                            v: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/120b49b4367be29a922fd069836655b6/3/3.m3u8", 
-                            a: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/120b49b4367be29a922fd069836655b6/4/4.m3u8" 
-                        },
-						"540p": { 
-                            v: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/120b49b4367be29a922fd069836655b6/2/2.m3u8", 
-                            a: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/120b49b4367be29a922fd069836655b6/4/4.m3u8" 
-                        },
-						"360p": { 
-                            v: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/120b49b4367be29a922fd069836655b6/1/1.m3u8", 
-                            a: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/120b49b4367be29a922fd069836655b6/4/4.m3u8" 
-                        }                     
-                    }
-                },
-				{ 
-                    name: "ZDFinfo", 
-                    logo: "https://www.zdf.de/favicon.ico",
-                    streams: {
-                        "auto": "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/high/master.m3u8",
-						"720p": { 
-                            v: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/bfe62861aed8d08a85046a0e604c6620/3/3.m3u8", 
-                            a: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/bfe62861aed8d08a85046a0e604c6620/4/4.m3u8" 
-                        },
-						"540p": { 
-                            v: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/bfe62861aed8d08a85046a0e604c6620/2/2.m3u8", 
-                            a: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/bfe62861aed8d08a85046a0e604c6620/4/4.m3u8" 
-                        },
-						"360p": { 
-                            v: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/bfe62861aed8d08a85046a0e604c6620/1/1.m3u8", 
-                            a: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/bfe62861aed8d08a85046a0e604c6620/4/4.m3u8" 
-                        }                     
-                    }
-                },
-				{ 
-                    name: "3sat", 
-                    logo: "https://www.3sat.de/favicon.ico",
-                    streams: {
-                        "auto": "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/high/master.m3u8",
-						"720p": { 
-                            v: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/063b0cc12b531832d86e95707911dbc6/3/3.m3u8", 
-                            a: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/063b0cc12b531832d86e95707911dbc6/4/4.m3u8" 
-                        },
-						"540p": { 
-                            v: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/063b0cc12b531832d86e95707911dbc6/2/2.m3u8", 
-                            a: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/063b0cc12b531832d86e95707911dbc6/4/4.m3u8" 
-                        },
-						"360p": { 
-                            v: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/063b0cc12b531832d86e95707911dbc6/1/1.m3u8", 
-                            a: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/063b0cc12b531832d86e95707911dbc6/4/4.m3u8" 
-                        }                     
-                    }
-                },
+            germantv: [				
+				{
+				  name: "ZDF",
+				  logo: "https://www.zdf.de/favicon.ico",
+				  streams: {
+					auto: "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/high/master.m3u8",
+					"720p": "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/veryhigh/master.m3u8",
+					"540p": "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/med/master.m3u8",
+					"360p": "https://zdf-hls-15.akamaized.net/hls/live/2016498/de/low/master.m3u8"
+				  }
+				},
+				{
+				  name: "ZDFneo",
+				  logo: "https://www.zdf.de/favicon.ico",
+				  streams: {
+					auto: "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/high/master.m3u8",
+					"720p": "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/veryhigh/master.m3u8",
+					"540p": "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/med/master.m3u8",
+					"360p": "https://zdf-hls-16.akamaized.net/hls/live/2016499/de/low/master.m3u8"
+				  }
+				},
+				{
+				  name: "ZDFinfo",
+				  logo: "https://www.zdf.de/favicon.ico",
+				  streams: {
+					auto: "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/high/master.m3u8",
+					"720p": "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/veryhigh/master.m3u8",
+					"540p": "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/med/master.m3u8",
+					"360p": "https://zdf-hls-17.akamaized.net/hls/live/2016500/de/low/master.m3u8"
+				  }
+				},
+				{
+				  name: "3sat",
+				  logo: "https://www.3sat.de/favicon.ico",
+				  streams: {
+					auto: "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/high/master.m3u8",
+					"720p": "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/veryhigh/master.m3u8",
+					"540p": "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/med/master.m3u8",
+					"360p": "https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/low/master.m3u8"
+				  }
+				},
 				{ 
                     name: "Phoenix", 
                     logo: "https://www.phoenix.de/favicon.ico",
-                    streams: {
-                        "auto": "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/high/master.m3u8",
-						"720p": { 
-                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/adefaa198877182baa4ff38d4d4e5957/3/3.m3u8", 
-                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/adefaa198877182baa4ff38d4d4e5957/4/4.m3u8" 
-                        },
-						"540p": { 
-                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/adefaa198877182baa4ff38d4d4e5957/2/2.m3u8", 
-                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/adefaa198877182baa4ff38d4d4e5957/4/4.m3u8" 
-                        },
-						"360p": { 
-                            v: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/adefaa198877182baa4ff38d4d4e5957/1/1.m3u8", 
-                            a: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/adefaa198877182baa4ff38d4d4e5957/4/4.m3u8" 
-                        }                     
-                    }
+				  streams: {
+					auto: "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/high/master.m3u8",
+					"720p": "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/veryhigh/master.m3u8",
+					"540p": "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/med/master.m3u8",
+					"360p": "https://zdf-hls-19.akamaized.net/hls/live/2016502/de/low/master.m3u8"
+				  }
                 },
 				{ 
                     name: "arte", 
